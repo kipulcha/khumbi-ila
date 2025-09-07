@@ -1,0 +1,283 @@
+<?php
+
+$pId = @$_GET['id'];
+$tag = @$_GET['tag'];
+
+if (@$_GET['action'] == 'delete') {
+    $imageName = $mydb->select_field("filename", "tbl_trip_gallery", "id='".@$_GET['del_id']."'");
+    $mydb->where("id", @$_GET['del_id']);
+    $delete =$mydb->delete("tbl_trip_gallery");
+
+    if(@$delete) {
+        unlink( './site_images/packages-gallery/' . $imageName );
+        unlink( './site_images/packages-gallery/' . 'thumb_' . $imageName );
+        $mydb->redirect("./?page=package-gallery&msg=delete&id=" . $pId . "&tag=" . $tag);
+    } else {
+        $mydb->redirect("./?page=package-gallery&msg=deleted-error&id=" . $pId . "&tag=" . $tag);
+    }
+}
+
+?>
+
+<div class="content-wrapper" id="content">
+
+    <section class="content-header">
+
+        <h1><?=ucwords($tag);?> Gallery&nbsp;&nbsp;<a href="./?page=<?=$tag;?>">
+                <button class="btn btn-success" id="edit" title="Go Back"><i
+                        class="fa fa-arrow-circle-left"></i> Go Back
+                </button>
+            </a>&nbsp;&nbsp;<a href="./?page=package-trips&pid=<?=$pId;?>&tag=<?=$tag;?>">
+
+                <button class="btn btn-success" title="User Gallery"><i class="fa fa-plus"></i> Add Photos</button>
+
+            </a></h1>
+
+        <ol class="breadcrumb">
+
+            <li><a href="./"><i class="fa fa-dashboard"></i> Home</a></li>
+
+            <li><?=ucwords($tag);?></li>
+
+            <li class="active"><?=ucwords($tag);?> Gallery View</li>
+
+        </ol>
+
+    </section>
+
+    <section class="content">
+
+        <div class="row">
+
+            <div class="col-xs-12">
+
+                <div class="box box-success">
+
+                    <div class="box-header">
+
+                        <h3 class="box-title">View Images</h3>
+
+                    </div>
+
+                    <!-- /.box-header -->
+
+                    <div class="box-body">
+
+                        <?php
+                        // Notifications
+                        if (@$_GET['msg'] == 'caption-added') { ?>
+
+                            <div class="alert alert-success alert-dismissable">
+
+                                <button class="close" aria-hidden="true" data-dismiss="alert" type="button"><i
+                                        class="fa fa-remove"></i></button>
+
+                                <h4>
+
+                                    <i class="icon fa fa-check"></i>
+
+                                    Caption Updated
+
+                                </h4>
+
+                                Caption has been Updated.
+
+                            </div>
+
+                        <?php } elseif (@$_GET['msg'] == 'caption-error') { ?>
+
+                            <div class="alert alert-danger alert-dismissable">
+
+                                <button class="close" aria-hidden="true" data-dismiss="alert" type="button"><i
+                                        class="fa fa-remove"></i></button>
+
+                                <h4>
+
+                                    <i class="icon fa fa-check"></i>
+
+                                    Error!
+
+                                </h4>
+
+                                Error while updating caption.
+
+                            </div>
+
+                        <?php } elseif (@$_GET['msg'] == 'added') { ?>
+
+                            <div class="alert alert-success alert-dismissable">
+
+                                <button class="close" aria-hidden="true" data-dismiss="alert" type="button"><i
+                                        class="fa fa-remove"></i></button>
+
+                                <h4>
+
+                                    <i class="icon fa fa-check"></i>
+
+                                    Succesfully Added!
+
+                                </h4>
+
+                                Photos have been added to Gallery.
+                            </div>
+
+
+                        <?php } elseif (@$_GET['msg'] == 'deleted') { ?>
+
+                            <div class="alert alert-info alert-dismissable">
+
+                                <button class="close" aria-hidden="true" data-dismiss="alert" type="button"><i
+                                        class="fa fa-remove"></i></button>
+
+                                <h4>
+
+                                    <i class="icon fa fa-check"></i>
+
+                                    Succesfully Deleted!
+
+                                </h4>
+
+                                Gallery Photo has been Deleted.
+
+                            </div>
+
+                        <?php }
+
+                        $mydb->where("p_id",$pId,"=");
+                        $result = $mydb->select("tbl_trip_gallery");
+                        $count = 0;
+                        if ($mydb->totalRows > 0) {
+                            foreach ($result as $row):
+                                ?>
+
+                                <div class="col-lg-2" style="min-height:150px;"><img class="img-responsive"
+                                                                                     src="site_images/packages-gallery/thumb_<?= $row['filename']; ?>"
+                                                                                     alt="<?= $row['caption']; ?>"
+                                                                                     title="<?= $row['caption']; ?>"/>
+
+                                    <a href="#caption" data-toggle="modal" data-id="<?= $row['id']; ?>"
+                                       data-caption="<?= $row['caption']; ?>" id="caption<?= $row['id']; ?>"
+                                       onClick="photo_caption(<?= $row['id']; ?>)"><i class="fa fa-edit"></i>Caption</a>&nbsp;&nbsp;
+
+                                    <a href="#delete" data-toggle="modal" data-id="<?= $row['id']; ?>" data-tag="<?=$tag;?>"
+                                       id="delete<?= $row['id']; ?>"
+                                       onClick="delete_photo(<?= $row['id']; ?>,<?=$pId;?>)"><i
+                                            class="fa fa-trash"></i> Delete</a></div>
+
+                                <?php $count++; ?>
+
+                                <?php echo($count % 6 == 0 ? '<p>&nbsp;</p><div class="clearfix"></div>' : ''); ?>
+
+                            <?php endforeach;
+
+                        } else { ?>
+
+                            <h3 style="text-align:center; padding:50px 0;">No Images to display</h3>
+
+                        <?php } ?>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<!--Delete Modal-->
+
+<script>
+
+    function delete_photo(id,pid) {
+
+        var tag = $('#delete' + id).attr('data-tag');
+
+        var conn = './?page=package-gallery&action=delete&del_id=' + id + '&id=' +pid + '&tag=' +tag;
+
+        $('#delete a').attr("href", conn);
+
+    }
+
+
+    function photo_caption(id) {
+
+        var caption = $('#caption' + id).attr('data-caption');
+
+        $('#caption_text').val(caption);
+
+        $('#caption_id').val(id);
+
+        $('#caption_table').val('tbl_trip_gallery');
+
+    }
+
+</script>
+
+
+<div id="delete" class="modal">
+
+    <div class="modal-header">
+
+        <button data-dismiss="modal" class="close" type="button">&times;</button>
+
+        <h3>Delete Photo</h3>
+
+    </div>
+
+    <div class="modal-body">
+
+        <p>
+
+            Do you want to delete Photo?
+
+        </p>
+
+    </div>
+
+    <div class="modal-footer"><a class="btn btn-primary" href="">Confirm</a> <a data-dismiss="modal"
+                                                                                class="btn btn-danger"
+                                                                                href="#">Cancel</a></div>
+
+</div>
+
+
+<div id="caption" class="modal">
+
+    <form name="caption-form" action="./pages/caption.php" method="post" enctype="multipart/form-data">
+
+        <div class="modal-header">
+
+            <button data-dismiss="modal" class="close" type="button">&times;</button>
+
+            <h3>Photo Caption</h3>
+
+        </div>
+
+        <div class="modal-body">
+
+            <p id="sec_text">Please enter photo caption:</p>
+
+            <input type="text" class="form-control" placeholder="Picture Caption" name="caption_text"
+                   id="caption_text"/>
+
+            <input type="hidden" class="form-control" name="caption_id" id="caption_id"/>
+
+            <input type="hidden" class="form-control" name="caption_table" id="caption_table"/>
+
+            <input type="hidden" class="form-control" name="caption_url" id="caption_url"
+                   value="./?page=package-gallery&tag=<?=$tag;?>&id=<?= $pId; ?>"/>
+
+        </div>
+
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Confirm</button>
+            <a data-dismiss="modal" class="btn btn-danger" href="#">Cancel</a></div>
+
+    </form>
+
+</div>
